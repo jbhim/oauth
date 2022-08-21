@@ -1,5 +1,6 @@
 package com.example.oauth.configration;
 
+import com.example.oauth.provider.PhoneCodeAuthenticationProvider;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -10,10 +11,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -69,13 +70,17 @@ public class SecurityConfig {
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
             throws Exception {
         log.info("@Order(2)");
+        http.authenticationProvider(new PhoneCodeAuthenticationProvider());
         http
                 .authorizeHttpRequests((authorize) -> authorize
                         .anyRequest().authenticated()
                 )
                 // Form login handles the redirect to the login page from the
                 // authorization server filter chain
-                .formLogin(Customizer.withDefaults());
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(login -> {
+                    login.loginProcessingUrl("/login/test");
+                });
 
 
         return http.build();
@@ -87,7 +92,7 @@ public class SecurityConfig {
             throws Exception {
         log.info("@Order(1)");
         http.mvcMatcher("/api/**")
-                .authorizeRequests(a -> a.antMatchers("/api/test").permitAll()
+                .authorizeHttpRequests(a -> a.antMatchers("/api/test").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
 
