@@ -8,9 +8,11 @@ import com.nimbusds.jose.proc.SecurityContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.core.userdetails.User;
@@ -39,11 +41,12 @@ import java.util.UUID;
 
 @Slf4j
 @Configuration
+@EnableWebSecurity
 public class SecurityConfig {
 
 
     @Bean
-    @Order(1)
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
             throws Exception {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
@@ -68,7 +71,6 @@ public class SecurityConfig {
         log.info("@Order(2)");
         http
                 .authorizeHttpRequests((authorize) -> authorize
-                        .antMatchers("/api/test").permitAll()
                         .anyRequest().authenticated()
                 )
                 // Form login handles the redirect to the login page from the
@@ -79,21 +81,24 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /*@Bean
-    public SecurityFilterChain resourceHttpSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .antMatchers("/api/userinfo").access("hasAuthority('SCOPE_message.read')")
-                .anyRequest().authenticated();
-        http.sessionManagement().disable();
-        http.oauth2ResourceServer().jwt();
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SecurityFilterChain resourceSecurityFilterChain(HttpSecurity http)
+            throws Exception {
+        log.info("@Order(1)");
+        http.mvcMatcher("/api/**")
+                .authorizeRequests(a -> a.antMatchers("/api/test").permitAll()
+                        .anyRequest().authenticated())
+                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+
         return http.build();
-    }*/
+    }
 
     @Bean
     public UserDetailsService userDetailsService() {
-        UserDetails userDetails = User.withDefaultPasswordEncoder()
+        UserDetails userDetails = User.builder()
                 .username("user")
-                .password("123456")
+                .password("{noop}123456")
                 .roles("USER")
                 .build();
 
@@ -111,7 +116,8 @@ public class SecurityConfig {
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                 .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-                .redirectUri("http://127.0.0.1:8080/api/test2")
+                .authorizationGrantType(AuthorizationGrantType.PASSWORD)
+                .redirectUri("http://www.baidu.com")
                 .tokenSettings(TokenSettings.builder().accessTokenTimeToLive(Duration.ofMinutes(120L)).build())
                 .scope(OidcScopes.OPENID)
                 .scope("message.read")

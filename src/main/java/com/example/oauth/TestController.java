@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * @author jintao
+ */
 @RestController
 @RequestMapping("/api")
 public class TestController {
@@ -23,7 +26,7 @@ public class TestController {
     @GetMapping("test2")
     public Map<String, Object> test2() {
         HashMap<String, Object> stringObjectHashMap = new HashMap<>();
-        stringObjectHashMap.put("test", "test");
+        stringObjectHashMap.put("test2", "test2");
         return stringObjectHashMap;
     }
 
