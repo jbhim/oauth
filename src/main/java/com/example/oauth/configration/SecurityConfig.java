@@ -1,5 +1,6 @@
 package com.example.oauth.configration;
 
+import com.example.oauth.provider.PhoneCodeAuthenticationFilter;
 import com.example.oauth.provider.PhoneCodeAuthenticationProvider;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -32,6 +33,7 @@ import org.springframework.security.oauth2.server.authorization.config.TokenSett
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -70,7 +72,10 @@ public class SecurityConfig {
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
             throws Exception {
         log.info("@Order(2)");
-        http.authenticationProvider(new PhoneCodeAuthenticationProvider());
+        PhoneCodeAuthenticationFilter filter = new PhoneCodeAuthenticationFilter();
+        http
+                .authenticationProvider(new PhoneCodeAuthenticationProvider(userDetailsService()))
+                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
         http
                 .authorizeHttpRequests((authorize) -> authorize
                         .anyRequest().authenticated()
