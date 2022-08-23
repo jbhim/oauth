@@ -1,7 +1,6 @@
 package com.example.oauth.configration;
 
-import com.example.oauth.provider.PhoneCodeAuthenticationFilter;
-import com.example.oauth.provider.PhoneCodeAuthenticationProvider;
+import com.example.oauth.provider.PhoneCodeHttpConfigurer;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -33,7 +32,6 @@ import org.springframework.security.oauth2.server.authorization.config.TokenSett
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -72,10 +70,6 @@ public class SecurityConfig {
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
             throws Exception {
         log.info("@Order(2)");
-        PhoneCodeAuthenticationFilter filter = new PhoneCodeAuthenticationFilter();
-        http
-                .authenticationProvider(new PhoneCodeAuthenticationProvider(userDetailsService()))
-                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
         http
                 .authorizeHttpRequests((authorize) -> authorize
                         .anyRequest().authenticated()
@@ -85,7 +79,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(login -> {
                     login.loginProcessingUrl("/login/test");
-                });
+                })
+                .apply(PhoneCodeHttpConfigurer.phoneCodeLogin(userDetailsService()));
 
 
         return http.build();

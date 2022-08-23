@@ -105,7 +105,7 @@ public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
             throw new BadCredentialsException("Bad credentials");
         }
         String phoneCode = authentication.getCredentials().toString();
-        if ("1111".equals(phoneCode)) {
+        if (!"1111".equals(phoneCode)) {
             log.debug("Failed to authenticate since phoneCode does not match stored value");
             throw new BadCredentialsException("Bad credentials");
         }
