@@ -19,6 +19,12 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.core.userdetails.cache.NullUserCache;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * 短信登录验证提供程序
@@ -66,7 +72,7 @@ public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
         }
         try {
             this.preAuthenticationChecks.check(user);
-            additionalAuthenticationChecks(user, (PhoneCodeAuthenticationToken) authentication);
+            additionalAuthenticationChecks((PhoneCodeAuthenticationToken) authentication);
         } catch (AuthenticationException ex) {
             if (!cacheWasUsed) {
                 throw ex;
@@ -76,7 +82,7 @@ public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
             cacheWasUsed = false;
             user = retrieveUser(phone, (PhoneCodeAuthenticationToken) authentication);
             this.preAuthenticationChecks.check(user);
-            additionalAuthenticationChecks(user, (PhoneCodeAuthenticationToken) authentication);
+            additionalAuthenticationChecks((PhoneCodeAuthenticationToken) authentication);
         }
         this.postAuthenticationChecks.check(user);
         if (!cacheWasUsed) {
@@ -98,14 +104,22 @@ public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
         return result;
     }
 
-    private void additionalAuthenticationChecks(UserDetails userDetails,
-                                                PhoneCodeAuthenticationToken authentication) throws AuthenticationException {
+    private void additionalAuthenticationChecks(PhoneCodeAuthenticationToken authentication) throws AuthenticationException {
         if (authentication.getCredentials() == null) {
             log.debug("Failed to authenticate since no credentials provided");
             throw new BadCredentialsException("Bad credentials");
         }
+        HttpServletRequest request = getRequest();
+        CharSequence targetCode;
+        if (request == null || StringUtils.hasText((CharSequence) request.getSession().getAttribute("code"))) {
+            log.debug("Failed to authenticate since phoneCode does not have stored value in session");
+            throw new BadCredentialsException("Bad credentials");
+        } else {
+            targetCode = (CharSequence) request.getSession().getAttribute("code");
+        }
+
         String phoneCode = authentication.getCredentials().toString();
-        if (!"1111".equals(phoneCode)) {
+        if (!targetCode.equals(phoneCode)) {
             log.debug("Failed to authenticate since phoneCode does not match stored value");
             throw new BadCredentialsException("Bad credentials");
         }
@@ -179,5 +193,14 @@ public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
 
     protected UserDetailsService getUserDetailsService() {
         return this.userDetailsService;
+    }
+
+    private static HttpServletRequest getRequest() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes instanceof ServletRequestAttributes) {
+            ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) requestAttributes;
+            return servletRequestAttributes.getRequest();
+        }
+        return null;
     }
 }
